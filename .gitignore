@@ -1,1 +1,6 @@
-.vscode/settings.json
+.vscode/
+.vscode/*
+.DS_Store
+.DS_Store/*
+build/*
+!build/Chess\ Engine.app

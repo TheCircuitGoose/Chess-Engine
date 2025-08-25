@@ -1,5 +1,5 @@
 /*
- * Chess Engine V0.1 Build 1
+ * Chess Engine V0.2
  *
  * (C) 2025 Tommy Ciccone All Rights Reserved.
 */
@@ -41,6 +41,8 @@ void printBoard() { // print board to console
 
 int immediateEvaluation() {
     int evaluation = 0;
+    bool whiteWins = true;
+    bool blackWins = true;
     char piece;
 
     for (int i = 0; i < 8; i++) {
@@ -53,48 +55,48 @@ int immediateEvaluation() {
                 case 'B': evaluation += 30; break;
                 case 'R': evaluation += 50; break;
                 case 'Q': evaluation += 90; break;
-                case 'K': evaluation += 1000000; break;
+                case 'K': evaluation += 100000; blackWins = false; break;
 
                 case 'p': evaluation -= 10; break;
                 case 'n': evaluation -= 30; break;
                 case 'b': evaluation -= 30; break;
                 case 'r': evaluation -= 50; break;
                 case 'q': evaluation -= 90; break;
-                case 'k': evaluation -= 1000000; break;
+                case 'k': evaluation -= 100000; whiteWins = false; break;
             }
 
             // minor piece development
             if (piece == 'N' || piece == 'B') {
-                if (i != 7) evaluation += 15;
+                if (i != 7) evaluation += 5;
             }
             if (piece == 'n' || piece == 'b') {
-                if (i != 0) evaluation -= 15;
+                if (i != 0) evaluation -= 5;
             }
 
             // centralized knights
-            if (piece == 'N' && (i >= 2 && i <= 5 && j >= 2 && j <= 5)) evaluation += 8;
-            if (piece == 'n' && (i >= 2 && i <= 5 && j >= 2 && j <= 5)) evaluation -= 8;
+            if (piece == 'N' && (i >= 2 && i <= 5 && j >= 2 && j <= 5)) evaluation += 3;
+            if (piece == 'n' && (i >= 2 && i <= 5 && j >= 2 && j <= 5)) evaluation -= 3;
 
             // defended pawns
             if (piece == 'P' && i > 0) {
-                if (j > 0 && board[i-1][j-1] == 'P') evaluation += 5;
-                if (j < 7 && board[i-1][j+1] == 'P') evaluation += 5;
+                if (j > 0 && board[i-1][j-1] == 'P') evaluation += 4;
+                if (j < 7 && board[i-1][j+1] == 'P') evaluation += 4;
             }
             if (piece == 'p' && i < 7) {
-                if (j > 0 && board[i+1][j-1] == 'p') evaluation -= 5;
-                if (j < 7 && board[i+1][j+1] == 'p') evaluation -= 5;
+                if (j > 0 && board[i+1][j-1] == 'p') evaluation -= 4;
+                if (j < 7 && board[i+1][j+1] == 'p') evaluation -= 4;
             }
 
             // advanced pawns
-            if (piece == 'P' && i < 6) evaluation += 5;
-            if (piece == 'p' && i > 2) evaluation -= 5;
+            if (piece == 'P' && i < 6) evaluation += 3;
+            if (piece == 'p' && i > 2) evaluation -= 3;
 
             // center control
-            if (piece == 'P' || piece == 'N' || piece == 'B' || piece == 'R' || piece == 'Q') {
-                if ((i == 3 || i == 4) && (j == 3 || j == 4)) evaluation += 8;
+            if (piece == 'P' || piece == 'B') {
+                if ((i == 3 || i == 4) && (j == 3 || j == 4)) evaluation += 4;
             }
-            if (piece == 'p' || piece == 'n' || piece == 'b' || piece == 'r' || piece == 'q') {
-                if ((i == 3 || i == 4) && (j == 3 || j == 4)) evaluation -= 8;
+            if (piece == 'p' || piece == 'b') {
+                if ((i == 3 || i == 4) && (j == 3 || j == 4)) evaluation -= 4;
             }
         }
     }
@@ -265,7 +267,7 @@ vector<string> enumerateAllMoves(bool whiteToMove) {
     return moves;
 }
 
-int enumerateMoveTree(int depth, bool whiteToMove) { // recursive evaluation of position
+int enumerateMoveTree(int depth, int branches, bool whiteToMove) { // recursive evaluation of position
     if (depth == 0) return immediateEvaluation(); // base case
 
     vector<string> moves = enumerateAllMoves(whiteToMove); // get moves
@@ -279,7 +281,7 @@ int enumerateMoveTree(int depth, bool whiteToMove) { // recursive evaluation of 
             char captured = board[tr][tf];
             board[tr][tf] = board[r][f];
             board[r][f] = '.';
-            int evaluation = enumerateMoveTree(depth - 1, false); // evaluate
+            int evaluation = enumerateMoveTree(depth - 1, branches, false); // evaluate
             board[r][f] = board[tr][tf]; // undo move
             board[tr][tf] = captured;
             te = max(te, evaluation);
@@ -295,7 +297,7 @@ int enumerateMoveTree(int depth, bool whiteToMove) { // recursive evaluation of 
             char captured = board[tr][tf];
             board[tr][tf] = board[r][f];
             board[r][f] = '.';
-            int evaluation = enumerateMoveTree(depth - 1, true);
+            int evaluation = enumerateMoveTree(depth - 1, branches, true);
             board[r][f] = board[tr][tf];
             board[tr][tf] = captured;
             te = min(te, evaluation);
@@ -304,7 +306,7 @@ int enumerateMoveTree(int depth, bool whiteToMove) { // recursive evaluation of 
     }
 }
 
-string selector(int depth) { // select best move for black
+string selector(int depth, int branches) { // select best move for black
     vector<string> moves = enumerateAllMoves(false); // black to move
     string bestMove;
     int te = 10000000;
@@ -316,7 +318,7 @@ string selector(int depth) { // select best move for black
         char captured = board[tr][tf];
         board[tr][tf] = board[r][f];
         board[r][f] = '.';
-        int evaluation = enumerateMoveTree(depth - 1, true); // evaluate
+        int evaluation = enumerateMoveTree(depth - 1, branches, true); // evaluate
         board[r][f] = board[tr][tf]; // undo move
         board[tr][tf] = captured;
 
@@ -355,7 +357,7 @@ string convertToAlgebraic(string coordinates) { // convert coordinates to lan
 int main() {
     string move;
 
-    cout << "Welcome to Chess Engine V0.1 Build 1\n";
+    cout << "Welcome to Chess Engine V0.2\n";
     cout << "(C) 2025 Tommy Ciccone All Rights Reserved.\n";
 
     initializeBoard();
@@ -380,7 +382,7 @@ int main() {
         printBoard();
         cout << "Evaluation: " << immediateEvaluation() << "\n\n";
         
-        string response = selector(5);
+        string response = selector(5, 10);
         if (response.size() < 4) {
             cout << "Black has no legal moves. Game over.\n";
             break;
