@@ -7,9 +7,30 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <chrono>
 
 using namespace std;
 
+class Timer {
+    public:
+        void start() {
+            startTime = chrono::high_resolution_clock::now();
+        }
+        void stop() {
+            endTime = chrono::high_resolution_clock::now();
+        }
+        string getTime() {
+            return to_string(chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count());
+        }
+    private:
+        chrono::high_resolution_clock::time_point startTime;
+        chrono::high_resolution_clock::time_point endTime;
+};
+
+const int engineDepth = 4;
+const int engineBranches = 10;
+
+int positionsEvaluated = 0;
 char board[8][8]; // 8x8 chess board
 
 void initializeBoard() { // place default pieces on board
@@ -100,6 +121,7 @@ int immediateEvaluation() {
             }
         }
     }
+    positionsEvaluated++;
     return evaluation;
 }
 
@@ -356,6 +378,7 @@ string convertToAlgebraic(string coordinates) { // convert coordinates to lan
 
 int main() {
     string move;
+    Timer timer;
 
     cout << "Welcome to Chess Engine V0.2\n";
     cout << "(C) 2025 Tommy Ciccone All Rights Reserved.\n";
@@ -381,14 +404,20 @@ int main() {
 
         printBoard();
         cout << "Evaluation: " << immediateEvaluation() << "\n\n";
+
+        cout << "Black is thinking...\n\n";
+        positionsEvaluated = 0;
         
-        string response = selector(5, 10);
+        timer.start();
+        string response = selector(engineDepth, engineBranches);
+        timer.stop();
         if (response.size() < 4) {
             cout << "Black has no legal moves. Game over.\n";
             break;
         }
         
         cout << "Black plays: " << convertToAlgebraic(response) << "\n";
+        cout << "Evaluated " << positionsEvaluated << " positions in " << timer.getTime() << " seconds.\n";
 
         int br = response[0] - '0';
         int bf = response[1] - '0';
