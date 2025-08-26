@@ -67,24 +67,24 @@ int immediateEvaluation() {
 
             // minor piece development
             if (piece == 'N' || piece == 'B') {
-                if (i != 7) evaluation += 5;
+                if (i != 7) evaluation += 2;
             }
             if (piece == 'n' || piece == 'b') {
-                if (i != 0) evaluation -= 5;
+                if (i != 0) evaluation -= 2;
             }
 
             // centralized knights
-            if (piece == 'N' && (i >= 2 && i <= 5 && j >= 2 && j <= 5)) evaluation += 3;
-            if (piece == 'n' && (i >= 2 && i <= 5 && j >= 2 && j <= 5)) evaluation -= 3;
+            if (piece == 'N' && (i >= 2 && i <= 5 && j >= 2 && j <= 5)) evaluation += 2;
+            if (piece == 'n' && (i >= 2 && i <= 5 && j >= 2 && j <= 5)) evaluation -= 2;
 
             // defended pawns
             if (piece == 'P' && i > 0) {
-                if (j > 0 && board[i-1][j-1] == 'P') evaluation += 4;
-                if (j < 7 && board[i-1][j+1] == 'P') evaluation += 4;
+                if (j > 0 && board[i-1][j-1] == 'P') evaluation += 2;
+                if (j < 7 && board[i-1][j+1] == 'P') evaluation += 2;
             }
             if (piece == 'p' && i < 7) {
-                if (j > 0 && board[i+1][j-1] == 'p') evaluation -= 4;
-                if (j < 7 && board[i+1][j+1] == 'p') evaluation -= 4;
+                if (j > 0 && board[i+1][j-1] == 'p') evaluation -= 2;
+                if (j < 7 && board[i+1][j+1] == 'p') evaluation -= 2;
             }
 
             // advanced pawns
@@ -92,11 +92,11 @@ int immediateEvaluation() {
             if (piece == 'p' && i > 2) evaluation -= 3;
 
             // center control
-            if (piece == 'P' || piece == 'B') {
-                if ((i == 3 || i == 4) && (j == 3 || j == 4)) evaluation += 4;
+            if (piece == 'P') {
+                if ((i == 3 || i == 4) && (j == 3 || j == 4)) evaluation += 2;
             }
-            if (piece == 'p' || piece == 'b') {
-                if ((i == 3 || i == 4) && (j == 3 || j == 4)) evaluation -= 4;
+            if (piece == 'p') {
+                if ((i == 3 || i == 4) && (j == 3 || j == 4)) evaluation -= 2;
             }
         }
     }
