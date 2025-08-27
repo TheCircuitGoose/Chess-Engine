@@ -30,6 +30,9 @@ class Timer {
 const int engineDepth = 4;
 const int engineBranches = 10;
 
+bool whiteKingMoved = 0, blackKingMoved = 0, whiteLeftRookMoved = 0, 
+    whiteRightRookMoved = 0, blackLeftRookMoved = 0, blackRightRookMoved = 0;
+
 int positionsEvaluated = 0;
 char board[8][8]; // 8x8 chess board
 
@@ -257,6 +260,22 @@ vector<string> enumerateKingMoves(int r, int f, char piece) { // list all possib
             }
         }
     }
+    if (piece == 'K' && !whiteKingMoved) { // white castling
+        if (!whiteLeftRookMoved && board[7][1] == '.' && board[7][2] == '.' && board[7][3] == '.') {
+            moves.push_back("7042"); // queenside
+        }
+        if (!whiteRightRookMoved && board[7][5] == '.' && board[7][6] == '.') {
+            moves.push_back("7046"); // kingside
+        }
+    }
+    if (piece == 'k' && !blackKingMoved) { // black castling
+        if (!blackLeftRookMoved && board[0][1] == '.' && board[0][2] == '.' && board[0][3] == '.') {
+            moves.push_back("0042"); // queenside
+        }
+        if (!blackRightRookMoved && board[0][5] == '.' && board[0][6] == '.') {
+            moves.push_back("0046"); // kingside
+        }
+    }
     return moves;
 }
 
@@ -376,8 +395,22 @@ string convertToAlgebraic(string coordinates) { // convert coordinates to lan
     return string(1, files[fromCol]) + string(1, ranks[fromRow]) + string(1, files[toCol]) + string(1, ranks[toRow]);
 }
 
+void whiteCastleCheck(int r, int f) {
+    if (r == 7 && f == 4) whiteKingMoved = true;
+    if (r == 7 && f == 0) whiteLeftRookMoved = true;
+    if (r == 7 && f == 7) whiteRightRookMoved = true;
+}
+
+void blackCastleCheck(int r, int f) {
+    if (r == 0 && f == 4) blackKingMoved = true;
+    if (r == 0 && f == 0) blackLeftRookMoved = true;
+    if (r == 0 && f == 7) blackRightRookMoved = true;
+}
+
 int main() {
     string move;
+    string response;
+    bool moveValid;
     Timer timer;
 
     cout << "Welcome to Chess Engine V0.2\n";
@@ -399,6 +432,21 @@ int main() {
         int tr = coordinates[2] - '0';
         int tf = coordinates[3] - '0';
 
+        vector<string> legalMoves = enumerateAllMoves(true);
+        for (string lm : legalMoves) {
+            if (lm == coordinates) moveValid = true;
+        }
+
+        if (!moveValid) {
+            cout << "\nIllegal move, try again.\n\n";
+            moveValid = false;
+            continue;
+        }
+
+        moveValid = false;
+
+        whiteCastleCheck(r, f);
+
         board[tr][tf] = board[r][f];
         board[r][f] = '.';
 
@@ -409,7 +457,7 @@ int main() {
         positionsEvaluated = 0;
         
         timer.start();
-        string response = selector(engineDepth, engineBranches);
+        response = selector(engineDepth, engineBranches);
         timer.stop();
         if (response.size() < 4) {
             cout << "Black has no legal moves. Game over.\n";
@@ -423,6 +471,8 @@ int main() {
         int bf = response[1] - '0';
         int btr = response[2] - '0';
         int btf = response[3] - '0';
+
+        blackCastleCheck(br, bf);
 
         board[btr][btf] = board[br][bf];
         board[br][bf] = '.';
