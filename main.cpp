@@ -1,5 +1,5 @@
 /*
- * Chess Engine V0.2
+ * Chess Engine V0.3
  *
  * (C) 2025 Tommy Ciccone All Rights Reserved.
 */
@@ -413,7 +413,7 @@ int main() {
     bool moveValid;
     Timer timer;
 
-    cout << "Welcome to Chess Engine V0.2\n";
+    cout << "Welcome to Chess Engine V0.3\n";
     cout << "(C) 2025 Tommy Ciccone All Rights Reserved.\n";
 
     initializeBoard();
