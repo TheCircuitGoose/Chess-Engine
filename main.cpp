@@ -33,6 +33,8 @@ const int engineBranches = 10;
 bool whiteKingMoved = 0, blackKingMoved = 0, whiteLeftRookMoved = 0, 
     whiteRightRookMoved = 0, blackLeftRookMoved = 0, blackRightRookMoved = 0;
 
+bool castled = false;
+
 int positionsEvaluated = 0;
 char board[8][8]; // 8x8 chess board
 
@@ -87,6 +89,10 @@ int immediateEvaluation() {
                 case 'r': evaluation -= 50; break;
                 case 'q': evaluation -= 90; break;
                 case 'k': evaluation -= 100000; whiteWins = false; break;
+            }
+
+            if (castled) {
+                evaluation -= 5; // bonus for castling
             }
 
             // minor piece development
@@ -262,18 +268,18 @@ vector<string> enumerateKingMoves(int r, int f, char piece) { // list all possib
     }
     if (piece == 'K' && !whiteKingMoved) { // white castling
         if (!whiteLeftRookMoved && board[7][1] == '.' && board[7][2] == '.' && board[7][3] == '.') {
-            moves.push_back("7042"); // queenside
+            moves.push_back("7427Q"); // queenside
         }
         if (!whiteRightRookMoved && board[7][5] == '.' && board[7][6] == '.') {
-            moves.push_back("7046"); // kingside
+            moves.push_back("7467K"); // kingside
         }
     }
     if (piece == 'k' && !blackKingMoved) { // black castling
         if (!blackLeftRookMoved && board[0][1] == '.' && board[0][2] == '.' && board[0][3] == '.') {
-            moves.push_back("0042"); // queenside
+            moves.push_back("0466Q"); // queenside
         }
         if (!blackRightRookMoved && board[0][5] == '.' && board[0][6] == '.') {
-            moves.push_back("0046"); // kingside
+            moves.push_back("0426K"); // kingside
         }
     }
     return moves;
@@ -338,9 +344,31 @@ int enumerateMoveTree(int depth, int branches, bool whiteToMove) { // recursive 
             char captured = board[tr][tf];
             board[tr][tf] = board[r][f];
             board[r][f] = '.';
+            if (move.length() == 5) { //castling if K or Q is appended to move tag
+                if (move[4] == 'K') {
+                    board[0][5] = 'r';
+                    board[0][7] = '.';
+                }
+                if (move[4] == 'Q') {
+                    board[0][3] = 'r';
+                    board[0][0] = '.';
+                }
+                castled = true;
+            }
             int evaluation = enumerateMoveTree(depth - 1, branches, true);
             board[r][f] = board[tr][tf];
             board[tr][tf] = captured;
+            if (castled) { // undo castling move
+                if (move[4] == 'K') {
+                    board[0][7] = 'r';
+                    board[0][5] = '.';
+                }
+                if (move[4] == 'Q') {
+                    board[0][0] = 'r';
+                    board[0][3] = '.';
+                }
+                castled = false;
+            }
             te = min(te, evaluation);
         }
         return te;
@@ -359,10 +387,31 @@ string selector(int depth, int branches) { // select best move for black
         char captured = board[tr][tf];
         board[tr][tf] = board[r][f];
         board[r][f] = '.';
+        if (move.length() == 5) { // castling if K or Q is appended to move tag
+            if (move[4] == 'K') {
+                board[0][5] = 'r';
+                board[0][7] = '.';
+            }
+            if (move[4] == 'Q') {
+                board[0][3] = 'r';
+                board[0][0] = '.';
+            }
+            castled = true;
+        }
         int evaluation = enumerateMoveTree(depth - 1, branches, true); // evaluate
         board[r][f] = board[tr][tf]; // undo move
         board[tr][tf] = captured;
-
+        if (castled) { // undo castling move
+            if (move[4] == 'K') {
+                board[0][7] = 'r';
+                board[0][5] = '.';
+            }
+            if (move[4] == 'Q') {
+                board[0][0] = 'r';
+                board[0][3] = '.';
+            }
+            castled = false;
+        }
         if (evaluation < te) { // if better than previous best move, set as new best move
             te = evaluation;
             bestMove = move;
@@ -476,6 +525,18 @@ int main() {
 
         board[btr][btf] = board[br][bf];
         board[br][bf] = '.';
+
+        if (response.length() == 5) {
+            if (move[4] == 'K') {
+                board[0][5] = 'r';
+                board[0][7] = '.';
+            }
+            if (move[4] == 'Q') {
+                board[0][3] = 'r';
+                board[0][0] = '.';
+            }
+            castled = true;
+        }
 
         printBoard();
         cout << "Evaluation: " << immediateEvaluation() << "\n\n";
