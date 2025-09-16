@@ -1,5 +1,5 @@
 /*
- * Chess Engine V0.3
+ * Chess Engine V0.4
  *
  * (C) 2025 Tommy Ciccone All Rights Reserved.
 */
@@ -27,7 +27,7 @@ class Timer {
         chrono::high_resolution_clock::time_point endTime;
 };
 
-const int engineDepth = 4;
+const int engineDepth = 5;
 const int engineBranches = 10;
 
 bool whiteKingMoved = 0, blackKingMoved = 0, whiteLeftRookMoved = 0, 
@@ -92,15 +92,15 @@ int immediateEvaluation() {
             }
 
             if (castled) {
-                evaluation -= 5; // bonus for castling
+                evaluation -= 4; // bonus for castling
             }
 
             // minor piece development
             if (piece == 'N' || piece == 'B') {
-                if (i != 7) evaluation += 2;
+                if (i < 6) evaluation += 2;
             }
             if (piece == 'n' || piece == 'b') {
-                if (i != 0) evaluation -= 2;
+                if (i > 1) evaluation -= 2;
             }
 
             // centralized knights
@@ -118,15 +118,15 @@ int immediateEvaluation() {
             }
 
             // advanced pawns
-            if (piece == 'P' && i < 6) evaluation += 3;
+            if (piece == 'P' && i < 5) evaluation += 3;
             if (piece == 'p' && i > 2) evaluation -= 3;
 
             // center control
             if (piece == 'P') {
-                if ((i == 3 || i == 4) && (j == 3 || j == 4)) evaluation += 2;
+                if ((i == 3 || i == 4) && (j == 3 || j == 4)) evaluation += 3;
             }
             if (piece == 'p') {
-                if ((i == 3 || i == 4) && (j == 3 || j == 4)) evaluation -= 2;
+                if ((i == 3 || i == 4) && (j == 3 || j == 4)) evaluation -= 3;
             }
         }
     }
@@ -268,18 +268,18 @@ vector<string> enumerateKingMoves(int r, int f, char piece) { // list all possib
     }
     if (piece == 'K' && !whiteKingMoved) { // white castling
         if (!whiteLeftRookMoved && board[7][1] == '.' && board[7][2] == '.' && board[7][3] == '.') {
-            moves.push_back("7427Q"); // queenside
+            moves.push_back("7472Q"); // queenside
         }
         if (!whiteRightRookMoved && board[7][5] == '.' && board[7][6] == '.') {
-            moves.push_back("7467K"); // kingside
+            moves.push_back("7476K"); // kingside
         }
     }
     if (piece == 'k' && !blackKingMoved) { // black castling
         if (!blackLeftRookMoved && board[0][1] == '.' && board[0][2] == '.' && board[0][3] == '.') {
-            moves.push_back("0466Q"); // queenside
+            moves.push_back("0402Q"); // queenside
         }
         if (!blackRightRookMoved && board[0][5] == '.' && board[0][6] == '.') {
-            moves.push_back("0426K"); // kingside
+            moves.push_back("0406K"); // kingside
         }
     }
     return moves;
@@ -353,12 +353,11 @@ int enumerateMoveTree(int depth, int branches, bool whiteToMove) { // recursive 
                     board[0][3] = 'r';
                     board[0][0] = '.';
                 }
-                castled = true;
             }
             int evaluation = enumerateMoveTree(depth - 1, branches, true);
             board[r][f] = board[tr][tf];
             board[tr][tf] = captured;
-            if (castled) { // undo castling move
+            if (move.length() == 5) { // undo castling move
                 if (move[4] == 'K') {
                     board[0][7] = 'r';
                     board[0][5] = '.';
@@ -367,7 +366,6 @@ int enumerateMoveTree(int depth, int branches, bool whiteToMove) { // recursive 
                     board[0][0] = 'r';
                     board[0][3] = '.';
                 }
-                castled = false;
             }
             te = min(te, evaluation);
         }
@@ -462,7 +460,7 @@ int main() {
     bool moveValid;
     Timer timer;
 
-    cout << "Welcome to Chess Engine V0.3\n";
+    cout << "Welcome to Chess Engine V0.4\n";
     cout << "(C) 2025 Tommy Ciccone All Rights Reserved.\n";
 
     initializeBoard();
@@ -526,12 +524,12 @@ int main() {
         board[btr][btf] = board[br][bf];
         board[br][bf] = '.';
 
-        if (response.length() == 5) {
-            if (move[4] == 'K') {
+        if (response.length() == 5 && (response[4] == 'K' || response[4] == 'Q')) {
+            if (response[4] == 'K' && board[0][7] == 'r') {
                 board[0][5] = 'r';
                 board[0][7] = '.';
             }
-            if (move[4] == 'Q') {
+            if (response[4] == 'Q' && board[0][0] == 'r') {
                 board[0][3] = 'r';
                 board[0][0] = '.';
             }
