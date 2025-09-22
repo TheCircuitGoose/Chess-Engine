@@ -266,7 +266,7 @@ vector<string> enumerateKingMoves(int r, int f, char piece) { // list all possib
             }
         }
     }
-    if (piece == 'K' && !whiteKingMoved) { // white castling
+/*  if (piece == 'K' && !whiteKingMoved) { // white castling
         if (!whiteLeftRookMoved && board[7][1] == '.' && board[7][2] == '.' && board[7][3] == '.') {
             moves.push_back("7472Q"); // queenside
         }
@@ -281,7 +281,7 @@ vector<string> enumerateKingMoves(int r, int f, char piece) { // list all possib
         if (!blackRightRookMoved && board[0][5] == '.' && board[0][6] == '.') {
             moves.push_back("0406K"); // kingside
         }
-    }
+    }*/
     return moves;
 }
 
