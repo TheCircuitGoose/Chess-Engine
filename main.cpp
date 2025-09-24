@@ -394,12 +394,11 @@ string selector(int depth, int branches) { // select best move for black
                 board[0][3] = 'r';
                 board[0][0] = '.';
             }
-            castled = true;
         }
         int evaluation = enumerateMoveTree(depth - 1, branches, true); // evaluate
         board[r][f] = board[tr][tf]; // undo move
         board[tr][tf] = captured;
-        if (castled) { // undo castling move
+        if (move.length() == 5) { // undo castling move
             if (move[4] == 'K') {
                 board[0][7] = 'r';
                 board[0][5] = '.';
@@ -408,7 +407,6 @@ string selector(int depth, int branches) { // select best move for black
                 board[0][0] = 'r';
                 board[0][3] = '.';
             }
-            castled = false;
         }
         if (evaluation < te) { // if better than previous best move, set as new best move
             te = evaluation;
