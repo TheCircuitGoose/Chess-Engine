@@ -4,10 +4,12 @@
  * (C) 2025 Tommy Ciccone All Rights Reserved.
 */
 
+#include <chrono>
 #include <iostream>
 #include <string>
 #include <vector>
-#include <chrono>
+#include <thread>
+#include "omp.h" // Include OpenMP for parallel processing. Need to install omp to build.
 
 using namespace std;
 
@@ -336,6 +338,7 @@ int enumerateMoveTree(int depth, int branches, bool whiteToMove) { // recursive 
         return te; // return evaluation
     } else { // for black
         int te = 10000000; 
+        #pragma omp parallel for // multithread with OpenMP
         for (string move : moves) {
             int r = move[0] - '0';
             int f = move[1] - '0';
@@ -374,9 +377,20 @@ int enumerateMoveTree(int depth, int branches, bool whiteToMove) { // recursive 
 }
 
 string selector(int depth, int branches) { // select best move for black
+    char backupBoard[8][8]; // Backup board data in case something goes wrong in selection
+    memcpy(backupBoard, board, sizeof(board));
+    bool backupWhiteKingMoved = whiteKingMoved;
+    bool backupBlackKingMoved = blackKingMoved;
+    bool backupWhiteLeftRookMoved = whiteLeftRookMoved;
+    bool backupWhiteRightRookMoved = whiteRightRookMoved;
+    bool backupBlackLeftRookMoved = blackLeftRookMoved;
+    bool backupBlackRightRookMoved = blackRightRookMoved;
+    bool backupCastled = castled;
+
     vector<string> moves = enumerateAllMoves(false); // black to move
     string bestMove;
     int te = 10000000;
+    #pragma omp parallel for // multithread with OpenMP
     for (string move : moves) {
         int r = move[0] - '0'; // make move
         int f = move[1] - '0';
@@ -414,6 +428,15 @@ string selector(int depth, int branches) { // select best move for black
         }
     }
     return bestMove; // return best move
+
+    memcpy(board, backupBoard, sizeof(board)); // restore original board
+    whiteKingMoved = backupWhiteKingMoved;
+    blackKingMoved = backupBlackKingMoved;
+    whiteLeftRookMoved = backupWhiteLeftRookMoved;
+    whiteRightRookMoved = backupWhiteRightRookMoved;
+    blackLeftRookMoved = backupBlackLeftRookMoved;
+    blackRightRookMoved = backupBlackRightRookMoved;
+    castled = backupCastled;
 }
 
 string convertToCoordinates(string algebraic) { // convert lan to coordinates
