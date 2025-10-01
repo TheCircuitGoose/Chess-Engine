@@ -29,8 +29,8 @@ class Timer {
         chrono::high_resolution_clock::time_point endTime;
 };
 
-const int engineDepth = 5;
-const int engineBranches = 10;
+int engineDepth = 5;
+int engineBranches = 10;
 
 bool whiteKingMoved = 0, blackKingMoved = 0, whiteLeftRookMoved = 0, 
     whiteRightRookMoved = 0, blackLeftRookMoved = 0, blackRightRookMoved = 0;
@@ -67,7 +67,7 @@ void printBoard() { // print board to console
     cout << "\033[90m  a b c d e f g h\n\n\033[0m"; // file
 }
 
-int immediateEvaluation() {
+int immediateEvaluation(bool isOpening = false) {
     int evaluation = 0;
     bool whiteWins = true;
     bool blackWins = true;
@@ -77,24 +77,25 @@ int immediateEvaluation() {
         for (int j = 0; j < 8; j++) {
             piece = board[i][j];
 
-            switch (piece) { //material evaluation
+            switch (piece) { // material evaluation
                 case 'P': evaluation += 10; break;
                 case 'N': evaluation += 30; break;
                 case 'B': evaluation += 30; break;
                 case 'R': evaluation += 50; break;
                 case 'Q': evaluation += 90; break;
-                case 'K': evaluation += 100000; blackWins = false; break;
+                case 'K': evaluation += 100000; whiteWins = false; break;
 
                 case 'p': evaluation -= 10; break;
                 case 'n': evaluation -= 30; break;
                 case 'b': evaluation -= 30; break;
                 case 'r': evaluation -= 50; break;
                 case 'q': evaluation -= 90; break;
-                case 'k': evaluation -= 100000; whiteWins = false; break;
+                case 'k': evaluation -= 100000; blackWins = false; break;
+                default: break;
             }
 
             if (castled) {
-                evaluation -= 4; // bonus for castling
+                evaluation -= 4; // bonus/penalty for castling (kept as original)
             }
 
             // minor piece development
@@ -111,24 +112,30 @@ int immediateEvaluation() {
 
             // defended pawns
             if (piece == 'P' && i > 0) {
-                if (j > 0 && board[i-1][j-1] == 'P') evaluation += 2;
-                if (j < 7 && board[i-1][j+1] == 'P') evaluation += 2;
+                if (j > 0 && board[i-1][j-1] == 'P') evaluation += 1;
+                if (j < 7 && board[i-1][j+1] == 'P') evaluation += 1;
             }
             if (piece == 'p' && i < 7) {
-                if (j > 0 && board[i+1][j-1] == 'p') evaluation -= 2;
-                if (j < 7 && board[i+1][j+1] == 'p') evaluation -= 2;
+                if (j > 0 && board[i+1][j-1] == 'p') evaluation -= 1;
+                if (j < 7 && board[i+1][j+1] == 'p') evaluation -= 1;
             }
 
             // advanced pawns
-            if (piece == 'P' && i < 5) evaluation += 3;
-            if (piece == 'p' && i > 2) evaluation -= 3;
+            if (piece == 'P' && i < 5) evaluation += 1;
+            if (piece == 'p' && i > 2) evaluation -= 1;
 
             // center control
             if (piece == 'P') {
-                if ((i == 3 || i == 4) && (j == 3 || j == 4)) evaluation += 3;
+                if ((i == 3 || i == 4) && (j == 3 || j == 4)) {
+                    evaluation += 5;
+                    if (isOpening) evaluation += 3; // extra bonus for center control in opening
+                }
             }
             if (piece == 'p') {
-                if ((i == 3 || i == 4) && (j == 3 || j == 4)) evaluation -= 3;
+                if ((i == 3 || i == 4) && (j == 3 || j == 4)) {
+                    evaluation -= 5;
+                    if (isOpening) evaluation -= 3; // extra bonus for center control in opening
+                }
             }
         }
     }
@@ -316,12 +323,19 @@ vector<string> enumerateAllMoves(bool whiteToMove) {
     return moves;
 }
 
-int enumerateMoveTree(int depth, int branches, bool whiteToMove) { // recursive evaluation of position
+int enumerateMoveTree(int depth, int branches, bool whiteToMove, int currentEval) { // recursive evaluation of position
     if (depth == 0) return immediateEvaluation(); // base case
+
+    if (depth < (engineDepth - 2)) { // basic pruning code
+        if (currentEval - immediateEvaluation() < -10) {
+            return immediateEvaluation();
+        } 
+    }
 
     vector<string> moves = enumerateAllMoves(whiteToMove); // get moves
     if (whiteToMove) { // for white
         int te = -10000000; // initial value
+        #pragma omp parallel for // multithread with OpenMP
         for (string move : moves) {
             int r = move[0] - '0'; // make move
             int f = move[1] - '0';
@@ -330,7 +344,7 @@ int enumerateMoveTree(int depth, int branches, bool whiteToMove) { // recursive 
             char captured = board[tr][tf];
             board[tr][tf] = board[r][f];
             board[r][f] = '.';
-            int evaluation = enumerateMoveTree(depth - 1, branches, false); // evaluate
+            int evaluation = enumerateMoveTree(depth - 1, branches, false, currentEval); // evaluate
             board[r][f] = board[tr][tf]; // undo move
             board[tr][tf] = captured;
             te = max(te, evaluation);
@@ -357,7 +371,7 @@ int enumerateMoveTree(int depth, int branches, bool whiteToMove) { // recursive 
                     board[0][0] = '.';
                 }
             }
-            int evaluation = enumerateMoveTree(depth - 1, branches, true);
+            int evaluation = enumerateMoveTree(depth - 1, branches, true, currentEval);
             board[r][f] = board[tr][tf];
             board[tr][tf] = captured;
             if (move.length() == 5) { // undo castling move
@@ -376,7 +390,7 @@ int enumerateMoveTree(int depth, int branches, bool whiteToMove) { // recursive 
     }
 }
 
-string selector(int depth, int branches) { // select best move for black
+string selector(int depth, int branches, int currentEval) { // select best move for black
     char backupBoard[8][8]; // Backup board data in case something goes wrong in selection
     memcpy(backupBoard, board, sizeof(board));
     bool backupWhiteKingMoved = whiteKingMoved;
@@ -409,7 +423,7 @@ string selector(int depth, int branches) { // select best move for black
                 board[0][0] = '.';
             }
         }
-        int evaluation = enumerateMoveTree(depth - 1, branches, true); // evaluate
+        int evaluation = enumerateMoveTree(depth - 1, branches, true, currentEval); // evaluate
         board[r][f] = board[tr][tf]; // undo move
         board[tr][tf] = captured;
         if (move.length() == 5) { // undo castling move
@@ -475,9 +489,14 @@ void blackCastleCheck(int r, int f) {
     if (r == 0 && f == 7) blackRightRookMoved = true;
 }
 
-int main() {
+int main(int argc, char* argv[]) {
+    if (argc == 2){
+        engineDepth = stoi(argv[1]);
+    }
+
     string move;
     string response;
+    int moveCount = 0;
     bool moveValid;
     Timer timer;
 
@@ -511,6 +530,8 @@ int main() {
             continue;
         }
 
+        moveCount++;
+
         moveValid = false;
 
         whiteCastleCheck(r, f);
@@ -525,7 +546,7 @@ int main() {
         positionsEvaluated = 0;
         
         timer.start();
-        response = selector(engineDepth, engineBranches);
+        response = selector(engineDepth, engineBranches, immediateEvaluation());
         timer.stop();
         if (response.size() < 4) {
             cout << "Black has no legal moves. Game over.\n";
